@@ -21,15 +21,13 @@ const glados = async () => {
       }).then((r) => r.json())
       if (status?.code) throw new Error(status?.message)
       notice.push(
-        'Checkin OK',
-        `${action?.message}`,
-        `Left Days ${Number(status?.data?.leftDays)}`
+        `✅ GLADOS签到成功 - ${action?.message}`,
+        `剩余天数: ${Number(status?.data?.leftDays)}天`
       )
     } catch (error) {
       notice.push(
-        'Checkin Error',
-        `${error}`,
-        `<${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}>`
+        `❌ GLADOS签到失败`,
+        `原因: ${error}`
       )
     }
   }
