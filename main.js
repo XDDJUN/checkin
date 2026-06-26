@@ -1,6 +1,6 @@
 const glados = async () => {
   const notice = []
-  if (!process.env.GLADOS) return
+  if (!process.env.GLADOS) return notice
   for (const cookie of String(process.env.GLADOS).split('\n')) {
     if (!cookie) continue
     try {
@@ -20,10 +20,7 @@ const glados = async () => {
         headers: { ...common },
       }).then((r) => r.json())
       if (status?.code) throw new Error(status?.message)
-      notice.push(
-        `✅ GLADOS签到成功 - ${action?.message}`,
-        `剩余天数: ${Number(status?.data?.leftDays)}天`
-      )
+      console.log(`✅ GLADOS签到成功 - ${action?.message}, 剩余 ${status?.data?.leftDays} 天`)
     } catch (error) {
       notice.push(
         `❌ GLADOS签到失败`,
@@ -35,57 +32,16 @@ const glados = async () => {
 }
 
 const notify = async (notice) => {
-  if (!process.env.NOTIFY || !notice) return
+  if (!process.env.NOTIFY || !notice || notice.length === 0) return
   for (const option of String(process.env.NOTIFY).split('\n')) {
     if (!option) continue
     try {
-      if (option.startsWith('console:')) {
-        for (const line of notice) {
-          console.log(line)
-        }
-      } else if (option.startsWith('wxpusher:')) {
-        await fetch(`https://wxpusher.zjiecode.com/api/send/message`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            appToken: option.split(':')[1],
-            summary: notice[0],
-            content: notice.join('<br>'),
-            contentType: 3,
-            uids: option.split(':').slice(2),
-          }),
-        })
-      } else if (option.startsWith('pushplus:')) {
+      if (option.startsWith('pushplus:')) {
         await fetch(`https://www.pushplus.plus/send`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             token: option.split(':')[1],
-            title: notice[0],
-            content: notice.join('<br>'),
-            template: 'markdown',
-          }),
-        })
-      } else if (option.startsWith('qyweixin:')) {
-        const qyweixinToken = option.split(':')[1]
-        const qyweixinNotifyRebotUrl = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=' + qyweixinToken;
-        await fetch(qyweixinNotifyRebotUrl, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            msgtype: 'markdown',
-            markdown: {
-                content: notice.join('<br>')
-            }
-          }),
-        })
-      } else {
-        // fallback
-        await fetch(`https://www.pushplus.plus/send`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            token: option,
             title: notice[0],
             content: notice.join('<br>'),
             template: 'markdown',
