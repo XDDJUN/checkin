@@ -1,20 +1,30 @@
+const UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15'
+
 const glados = async () => {
   const notice = []
-  if (!process.env.GLADOS) return notice
+  if (!process.env.GLADOS) {
+    console.log('⚠️ 未设置 GLADOS secret，跳过签到')
+    return notice
+  }
   for (const cookie of String(process.env.GLADOS).split('\n')) {
-    if (!cookie) continue
+    if (!cookie.trim()) continue
     try {
       const common = {
-        'cookie': cookie,
+        'cookie': cookie.trim(),
         'referer': 'https://glados.cloud/console/checkin',
-        'user-agent': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)',
+        'origin': 'https://glados.cloud',
+        'user-agent': UA,
       }
       const action = await fetch('https://glados.cloud/api/user/checkin', {
         method: 'POST',
         headers: { ...common, 'content-type': 'application/json' },
         body: '{"token":"glados.cloud"}',
       }).then((r) => r.json())
-      if (action?.code) throw new Error(action?.message)
+      // code 0 = 签到成功, code 1 = 今日已签到，均视为成功
+      if (action?.code !== 0 && action?.code !== 1) {
+        throw new Error(`code=${action?.code} ${action?.message || 'unknown'} ${action?.reason || ''}`.trim())
+      }
       const status = await fetch('https://glados.cloud/api/user/status', {
         method: 'GET',
         headers: { ...common },
@@ -22,10 +32,8 @@ const glados = async () => {
       if (status?.code) throw new Error(status?.message)
       console.log(`✅ GLADOS签到成功 - ${action?.message}, 剩余 ${status?.data?.leftDays} 天`)
     } catch (error) {
-      notice.push(
-        `❌ GLADOS签到失败`,
-        `原因: ${error}`
-      )
+      console.error(`❌ GLADOS签到失败 - ${error}`)
+      notice.push(`❌ GLADOS签到失败`, `原因: ${error}`)
     }
   }
   return notice
@@ -49,13 +57,17 @@ const notify = async (notice) => {
         })
       }
     } catch (error) {
-      throw error
+      console.error(`通知发送失败: ${error}`)
     }
   }
 }
 
 const main = async () => {
-  await notify(await glados())
+  const notice = await glados()
+  await notify(notice)
+  if (notice.length > 0) {
+    process.exitCode = 1
+  }
 }
 
 main()
