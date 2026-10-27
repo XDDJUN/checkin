@@ -8,11 +8,11 @@ GitHub Actions 实现 [GLaDOS][glados] 自动签到
 
 1. Fork 这个仓库
 
-1. 登录 [GLaDOS][glados] 获取 Cookie
+1. 登录 https://glados.vip/console/checkin 获取该域名下的 Cookie
 
-1. 添加 Cookie 到 Secret `GLADOS`
+1. 将两个 Cookie 按 `gld:sess=你的会话值; gld:sess.sig=你的签名值` 合并为一行，添加到 Secret `GLADOS`。保留名称和等号，不要只填值，也不要把同一账号的两个 Cookie 分成两行。
 
-1. 启用 Actions, 每天北京时间 00:10 自动签到
+1. 启用 Actions，当前配置每天北京时间 09:30 触发自动签到（实际运行可能延迟）
 
 ## 高级功能
 

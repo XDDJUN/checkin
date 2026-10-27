@@ -1,6 +1,8 @@
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15'
 
+const ORIGIN = 'https://glados.vip'
+
 const glados = async () => {
   const notice = []
   if (!process.env.GLADOS) {
@@ -10,22 +12,26 @@ const glados = async () => {
   for (const cookie of String(process.env.GLADOS).split('\n')) {
     if (!cookie.trim()) continue
     try {
+      const names = new Set(cookie.split(';').map((part) => part.trim().split('=')[0]))
+      if (!names.has('gld:sess') || !names.has('gld:sess.sig')) {
+        throw new Error('GLADOS 格式错误：每行须为 gld:sess=值; gld:sess.sig=值（同一账号的两个 Cookie 放在同一行）')
+      }
       const common = {
         'cookie': cookie.trim(),
-        'referer': 'https://glados.cloud/console/checkin',
-        'origin': 'https://glados.cloud',
+        'referer': `${ORIGIN}/console/checkin`,
+        'origin': ORIGIN,
         'user-agent': UA,
       }
-      const action = await fetch('https://glados.cloud/api/user/checkin', {
+      const action = await fetch(`${ORIGIN}/api/user/checkin`, {
         method: 'POST',
         headers: { ...common, 'content-type': 'application/json' },
-        body: '{"token":"glados.cloud"}',
+        body: JSON.stringify({ token: new URL(ORIGIN).hostname }),
       }).then((r) => r.json())
       // code 0 = 签到成功, code 1 = 今日已签到，均视为成功
       if (action?.code !== 0 && action?.code !== 1) {
         throw new Error(`code=${action?.code} ${action?.message || 'unknown'} ${action?.reason || ''}`.trim())
       }
-      const status = await fetch('https://glados.cloud/api/user/status', {
+      const status = await fetch(`${ORIGIN}/api/user/status`, {
         method: 'GET',
         headers: { ...common },
       }).then((r) => r.json())
