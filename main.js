@@ -3,6 +3,21 @@ const UA =
 
 const ORIGIN = 'https://glados.vip'
 
+const requestJson = async (path, options) => {
+  const response = await fetch(`${ORIGIN}${path}`, {
+    ...options,
+    signal: AbortSignal.timeout(60000),
+  })
+  const contentType = response.headers.get('content-type') || 'unknown'
+  const diagnostic = `${path}: HTTP ${response.status}, Content-Type ${contentType}`
+  if (!response.ok) throw new Error(diagnostic)
+  try {
+    return await response.json()
+  } catch {
+    throw new Error(`${diagnostic}, 返回内容不是有效 JSON（可能是网关错误或访问拦截页面）`)
+  }
+}
+
 const glados = async () => {
   const notice = []
   if (!process.env.GLADOS) {
@@ -22,19 +37,19 @@ const glados = async () => {
         'origin': ORIGIN,
         'user-agent': UA,
       }
-      const action = await fetch(`${ORIGIN}/api/user/checkin`, {
+      const action = await requestJson('/api/user/checkin', {
         method: 'POST',
         headers: { ...common, 'content-type': 'application/json' },
         body: JSON.stringify({ token: new URL(ORIGIN).hostname }),
-      }).then((r) => r.json())
+      })
       // code 0 = 签到成功, code 1 = 今日已签到，均视为成功
       if (action?.code !== 0 && action?.code !== 1) {
         throw new Error(`code=${action?.code} ${action?.message || 'unknown'} ${action?.reason || ''}`.trim())
       }
-      const status = await fetch(`${ORIGIN}/api/user/status`, {
+      const status = await requestJson('/api/user/status', {
         method: 'GET',
         headers: { ...common },
-      }).then((r) => r.json())
+      })
       if (status?.code) throw new Error(status?.message)
       console.log(`✅ GLADOS签到成功 - ${action?.message}, 剩余 ${status?.data?.leftDays} 天`)
     } catch (error) {
